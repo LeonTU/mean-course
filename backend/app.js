@@ -2,6 +2,16 @@ const express = require('express')
 const { title } = require('process')
 const bodyParser = require('body-parser')
 const app = express()
+const Post = require('./models/post')
+const mongoose = require('mongoose')
+
+mongoose.connect('mongodb+srv://Leon:03xfb9OR3TlOoF5J@cluster0.1sck0.mongodb.net/angular-node?retryWrites=true&w=majority')
+  .then(() => {
+    console.log('Database connected')
+  })
+  .catch(() => {
+    console.log('Connection failed')
+  })
 
 app
   .use(bodyParser.json())
@@ -19,32 +29,29 @@ app
     next()
   })
   .post('/api/posts', (req, res, next) => {
-    console.log(req.body)
-    res.status(201).json({
-      message: 'Post added successfully'
+    const post = new Post({
+      title: req.body.title,
+      content: req.body.content
+    })
+    post.save().then(result => {
+      res.status(201).json({
+        message: 'Post added successfully',
+        postId: result._id
+      })
+    })
+  })
+  .delete('/api/posts/:id', (req, res, next) => {
+    //Post.findByIdAndDelete()
+    Post.findByIdAndDelete(req.params.id).then(() => {
+      res.status(200).json({ message: 'Post deleted' })
     })
   })
   .get('/api/posts', (req, res, next) => {
-    const posts = [
-      {
-        id: 'dfjlsjflsjflsfjdlsfjl',
-        title: 'title 1',
-        content: 'content 1'
-      },
-      {
-        id: 'dfjlsjflsjflsfjdlsfjl',
-        title: 'title 2',
-        content: 'content 2'
-      },
-      {
-        id: 'dfjlsjflsjflsfjdlsfjl',
-        title: 'title 3',
-        content: 'content 3'
-      }
-    ]
-    res.status(200).json({
-      message: 'Posts fetched successfully',
-      data: posts
+    Post.find().then(document => {
+      res.status(200).json({
+        message: 'Posts fetched successfully',
+        data: document
+      })
     })
   })
 
