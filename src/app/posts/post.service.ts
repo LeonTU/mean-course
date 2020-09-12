@@ -1,6 +1,6 @@
 import { Post, Post_MongoDB } from './post.model';
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, from } from 'rxjs';
+import { BehaviorSubject, Observable } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { map } from 'rxjs/operators'
 
@@ -24,6 +24,16 @@ export class PostService {
       });
   }
 
+  getPost(id: string): Observable<Post> {
+    return this.http.get<{message: string, data: Post_MongoDB}>(`${this.url}/${id}`).pipe(map((resData): Post => {
+      return {
+        id: resData.data._id,
+        title: resData.data.title,
+        content: resData.data.content,
+      };
+    }));
+  }
+
   getPosts(): Observable<Post[]> {
     this.http
       .get<{message: string, data: Post_MongoDB[]}>(this.url)
@@ -43,6 +53,19 @@ export class PostService {
         this.postSubject.next([...this.posts]);
       });
     return this.postSubject.asObservable();
+  }
+
+  updatePost(post: Post) {
+    const postForUpdate: Post_MongoDB = {
+      _id: post.id,
+      title: post.title,
+      content: post.content
+    };
+    this.http.put(`${this.url}/${post.id}`, postForUpdate).subscribe(() => {
+      // const postRef = this.posts.find(p => p.id === post.id);
+      // postRef.title = postForUpdate.title;
+      // postRef.content = postForUpdate.content;
+    });
   }
 
   deletePost(id: string) {

@@ -24,7 +24,7 @@ app
     )
     res.setHeader(
       'Access-Control-Allow-Methods',
-      'GET, POST, PATCH, DELETE, OPTIONS'
+      'GET, POST, PUT,PATCH, DELETE, OPTIONS'
     )
     next()
   })
@@ -40,10 +40,29 @@ app
       })
     })
   })
+  .put('/api/posts/:id', (req, res, next) => {
+    Post.findByIdAndUpdate(req.params.id, req.body).then(() => {
+      res.status(200).json({ message: 'Post updated' })
+    })
+  })
   .delete('/api/posts/:id', (req, res, next) => {
     //Post.findByIdAndDelete()
     Post.findByIdAndDelete(req.params.id).then(() => {
       res.status(200).json({ message: 'Post deleted' })
+    })
+  })
+  .get('/api/posts/:id', (req, res, next) => {
+    Post.findOne({_id: req.params.id}).then(post => {
+      if (post) {
+        res.status(200).json({
+          message: 'Post fetched successfully',
+          data: post
+        })
+      } else {
+        res.status(404).json({
+          message: 'Post not found',
+        })
+      }
     })
   })
   .get('/api/posts', (req, res, next) => {
