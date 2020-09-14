@@ -4,6 +4,7 @@ const bodyParser = require('body-parser')
 const app = express()
 const mongoose = require('mongoose')
 const postsRoutes = require('./routes/posts')
+const path = require('path')
 
 mongoose.connect('mongodb+srv://Leon:03xfb9OR3TlOoF5J@cluster0.1sck0.mongodb.net/angular-node?retryWrites=true&w=majority')
   .then(() => {
@@ -16,6 +17,7 @@ mongoose.connect('mongodb+srv://Leon:03xfb9OR3TlOoF5J@cluster0.1sck0.mongodb.net
 app
   .use(bodyParser.json())
   //.use(bodyParser.urlencoded({ extended: false }))
+  .use('/images', express.static(path.join('backend/images')))
   .use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*')
     res.setHeader(
