@@ -1,4 +1,4 @@
-import { Post, Post_MongoDB } from './post.model';
+import { Post, Post_MongoDB, Post_List } from './post.model';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
@@ -11,7 +11,7 @@ import { Router } from '@angular/router';
 export class PostService {
   private url: string = `http://localhost:3000/api/posts`;
   private posts: Post[] = [];
-  private postSubject = new BehaviorSubject<Post[]>([]);
+  private postSubject = new BehaviorSubject<Post_List>({posts: [], totalPosts: 0});
   constructor(private http: HttpClient, private router: Router) {}
 
   addPost(post: Post): void {
@@ -21,16 +21,7 @@ export class PostService {
     postData.append('image', post.image, post.title);
     this.http
       .post<{ message: string, post: Post_MongoDB }>(this.url, postData)
-      .subscribe((res) => {
-        console.log(res.message);
-        const post: Post = {
-          id: res.post._id,
-          title: res.post.title,
-          content: res.post.content,
-          imagePath: res.post.imagePath,
-        };
-        this.posts.push(post);
-        this.postSubject.next([...this.posts]);
+      .subscribe(() => {
         this.router.navigate(['/']);
       });
   }
@@ -47,29 +38,35 @@ export class PostService {
     }));
   }
 
-  getPosts(): Observable<Post[]> {
+  getPosts(pageSize: number, currentPage: number): Observable<Post_List> {
+    const query: string = (pageSize > 0 && currentPage > 0) ?
+      `?pageSize=${pageSize}&currentPage=${currentPage}` : '';
     this.http
-      .get<{message: string, data: Post_MongoDB[]}>(this.url)
+      .get<{message: string, data: Post_MongoDB[], totalPosts: number}>(this.url + query)
       .pipe(
-        map((resData): Post[] => {
-          return resData.data.map((post: Post_MongoDB): Post => {
-            return {
-              id: post._id,
-              title: post.title,
-              content: post.content,
-              imagePath: post.imagePath
-            };
-          });
+        map((resData): Post_List => {
+          const postList: Post_List = {
+            posts: resData.data.map((post: Post_MongoDB): Post => {
+              return {
+                id: post._id,
+                title: post.title,
+                content: post.content,
+                imagePath: post.imagePath
+              }
+            }),
+            totalPosts: resData.totalPosts
+          };
+          return postList;
         })
       )
-      .subscribe((posts: Post[]) => {
-        this.posts = posts;
-        this.postSubject.next([...this.posts]);
+      .subscribe((postList: Post_List) => {
+        this.posts = postList.posts;
+        this.postSubject.next({ posts: [...this.posts], totalPosts: postList.totalPosts});
       });
     return this.postSubject.asObservable();
   }
 
-  updatePost(post: Post, image: File | string) {
+  updatePost(post: Post, image: File | string): void {
     let postData;
     if (typeof(image) === 'object') {
       postData = new FormData();
@@ -85,18 +82,12 @@ export class PostService {
         imagePath: image
       };
     }
-    this.http.put(`${this.url}/${post.id}`, postData).subscribe(() => {
-      // const postRef = this.posts.find(p => p.id === post.id);
-      // postRef.title = postForUpdate.title;
-      // postRef.content = postForUpdate.content;
+    this.http.put<{ message: string}>(`${this.url}/${post.id}`, postData).subscribe(() => {
       this.router.navigate(['/']);
     });
   }
 
-  deletePost(id: string) {
-    this.http.delete(`${this.url}/${id}`).subscribe(() => {
-      this.posts = this.posts.filter((post: Post) => post.id !== id);
-      this.postSubject.next([...this.posts]);
-    });
+  deletePost(id: string): Observable<{ message: string}> {
+    return this.http.delete<{ message: string}>(`${this.url}/${id}`);
   }
 }

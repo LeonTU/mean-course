@@ -69,12 +69,26 @@ router.
     })
   })
   .get('', (req, res, next) => {
-    Post.find().then(document => {
-      res.status(200).json({
-        message: 'Posts fetched successfully',
-        data: document
+    const pageSize = +req.query.pageSize
+    const currentPage = +req.query.currentPage
+    const postQuery = Post.find()
+    let fetchedData
+
+    if (pageSize && currentPage) {
+      postQuery.skip(pageSize * (currentPage - 1)).limit(pageSize)
+    }
+    postQuery
+      .then(document => {
+        fetchedData = document
+        return Post.count()
       })
-    })
+      .then(document => {
+        res.status(200).json({
+          message: 'Posts fetched successfully',
+          data: fetchedData,
+          totalPosts: document
+        })
+      })
   })
 
 module.exports = router
