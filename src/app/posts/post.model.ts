@@ -3,7 +3,8 @@ export interface Post {
   title: string,
   content: string,
   imagePath?: string,
-  image?: File
+  image?: File,
+  creator?: string,
 }
 
 export interface Post_MongoDB {
@@ -11,6 +12,7 @@ export interface Post_MongoDB {
   title: string,
   content: string,
   imagePath: string,
+  creator?: string,
 }
 
 export interface Post_List {

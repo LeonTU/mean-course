@@ -3,6 +3,7 @@ const { Error } = require('mongoose');
 const router = express.Router();
 const multer = require('multer');
 const authCheck = require('../middleware/check-auth');
+const jwt = require('jsonwebtoken');
 const MIME_TYPE_MAP = {
   'image/png': 'png',
   'image/jpeg': 'jpg',
@@ -10,6 +11,7 @@ const MIME_TYPE_MAP = {
 };
 
 const Post = require('../models/post');
+const User = require('../models/user');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -62,16 +64,19 @@ router
       });
   })
   .post('', authCheck, multer({ storage: storage }).single('image'), (req, res, next) => {
-    const url = `${req.protocol}://${req.get('host')}`;
-    const post = new Post({
-      title: req.body.title,
-      content: req.body.content,
-      imagePath: `${url}/images/${req.file.filename}`
-    });
-    post.save().then(result => {
-      res.status(201).json({
-        message: 'Post added successfully',
-        post: result
+    User.findById(req.userData.userId).then(user => {
+      const url = `${req.protocol}://${req.get('host')}`;
+      const post = new Post({
+        title: req.body.title,
+        content: req.body.content,
+        imagePath: `${url}/images/${req.file.filename}`,
+        creator: user._id
+      });
+      post.save().then(result => {
+        res.status(201).json({
+          message: 'Post added successfully',
+          post: result
+        });
       });
     });
   })
@@ -81,13 +86,23 @@ router
       const imagePath = `${url}/images/${req.file.filename}`;
       req.body.imagePath = imagePath;
     }
-    Post.findByIdAndUpdate(req.params.id, req.body).then(() => {
-      res.status(200).json({ message: 'Post updated' });
+    Post.updateOne({ _id: req.params.id, creator: req.userData.userId }, req.body).then(result => {
+      if (result.nModified > 0) {
+        res.status(200).json({ message: 'Post updated' });
+      } else {
+        res.status(401).json({ message: 'Not authorized' });
+      }
     });
   })
   .delete('/:id', authCheck, (req, res, next) => {
-    Post.findByIdAndDelete(req.params.id).then(() => {
-      res.status(200).json({ message: 'Post deleted' });
+    Post.findByIdAndDelete({
+      _id: req.params.id, creator: req.userData.userId
+    }).then(result => {
+      if (result.n > 0) {
+        res.status(200).json({ message: 'Post deleted' });
+      } else {
+        res.status(401).json({ message: 'Not authorized' });
+      }
     });
   });
 
